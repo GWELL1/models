@@ -18,6 +18,7 @@ import os
 import numpy as np
 from sklearn.metrics import roc_auc_score
 
+import mindspore.ops as ops
 import mindspore.common.dtype as mstype
 from mindspore.ops import functional as F
 from mindspore.ops import composite as C
@@ -257,7 +258,18 @@ class NetWithLossClass(nn.Cell):
         l2_loss_v = self.ReduceSum_false(self.Square(fm_id_embs))
         l2_loss_all = self.l2_coef * (l2_loss_v + l2_loss_w) * 0.5
         loss = mean_log_loss + l2_loss_all
-        return loss
+        # print("----------------------------------------------------------------------------")
+        alpha = 0.2  # alpha取值在[0，1]
+        lce = mean_log_loss
+
+        y_last = label
+
+        relu = ops.ReLU()
+        lsc = self.ReduceMean_false(label * relu(y_last - predict) + (1 - label) * relu(predict - y_last))
+        loss_reloop = alpha * lsc + (1 - alpha) * lce
+        # print("----------------------------------------------------------------------------")
+        return loss_reloop
+        # return loss
 
 
 class TrainStepWrap(nn.Cell):
